@@ -1,0 +1,46 @@
+services:
+  api:
+    build: .
+    environment:
+      DATABASE_URL: postgresql+psycopg://parcelops:parcelops@db:5432/parcelops
+    ports:
+      - "127.0.0.1:8000:8000"
+    depends_on:
+      db:
+        condition: service_healthy
+    restart: unless-stopped
+
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: parcelops
+      POSTGRES_USER: parcelops
+      POSTGRES_PASSWORD: parcelops
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U parcelops -d parcelops"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  prometheus:
+    image: prom/prometheus:v2.55.1
+    ports:
+      - "127.0.0.1:9090:9090"
+    volumes:
+      - ./monitoring/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+    depends_on:
+      - api
+
+  tests:
+    profiles: ["test"]
+    build:
+      context: .
+      dockerfile: Dockerfile.test
+    environment:
+      DATABASE_URL: sqlite:////tmp/parcelops-unused.db
+    command: ["python", "-m", "pytest", "-q"]
+
+volumes:
+  postgres-data:
