@@ -8,9 +8,10 @@ ParcelOps is a local-first shipment tracking service and DevOps portfolio capsto
 - PostgreSQL persistence
 - Health and readiness endpoints for container orchestration
 - Prometheus metrics endpoint
+- Prometheus scraping and a provisioned Grafana dashboard
 - Docker Compose development stack
 
-The next increments will add CI, image and dependency scanning, GitOps deployment, dashboards, alerting, failure drills, and an optional AWS deployment with explicit cost controls.
+Further increments will add image and dependency scanning, GitOps deployment, alerting, failure drills, and an optional AWS deployment with explicit cost controls.
 
 ## Run locally
 
@@ -20,7 +21,11 @@ Requirements: Docker Desktop (or Docker Engine) with the Compose plugin.
 docker compose up --build
 ```
 
-The API is available at <http://localhost:8000>; interactive API docs are at <http://localhost:8000/docs>. Stop the stack with `docker compose down`. To also remove the local database volume, use `docker compose down --volumes` (this deletes stored demo shipments).
+The API is available at <http://localhost:8000>; interactive API docs are at <http://localhost:8000/docs>. Prometheus is at <http://localhost:9090>, and Grafana is at <http://localhost:3000>.
+
+For a stack that is already running, apply service additions or configuration changes with `docker compose up -d`. On first Grafana login, use `admin` for both username and password, then set a new local password when prompted. You can set your own initial password before starting the stack in PowerShell with `$env:GRAFANA_ADMIN_PASSWORD = 'your-local-password'`; do not reuse an important password. Grafana data persists in a Docker volume. Stop the stack with `docker compose down`. To also delete the local database and Grafana volumes, use `docker compose down --volumes` (this deletes saved shipments and Grafana state).
+
+Grafana provisions the Prometheus datasource and the **ParcelOps Service Overview** dashboard from files in `monitoring/grafana`. Dashboard panels show request rate, 5xx error percentage, p95 latency, request rate by HTTP status, and request rate by API route. Generate API traffic to populate the panels. Provisioned dashboard changes should be made in the JSON file and committed to Git.
 
 ## Run automated checks
 
@@ -55,6 +60,7 @@ flowchart LR
   Client[API client] --> API[FastAPI]
   API --> DB[(PostgreSQL)]
   Prom[Prometheus] -. scrapes .-> API
+  Grafana[Grafana dashboard] --> Prom
 ```
 
 ## Cost and safety
